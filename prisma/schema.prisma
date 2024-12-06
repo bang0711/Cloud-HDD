@@ -1,0 +1,232 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id                 String             @id @default(uuid())
+  firstName          String             @map("first_name")
+  lastName           String             @map("last_name")
+  dob                DateTime
+  gender             String
+  bloodType          String             @map("blood_type")
+  cid                String
+  treatmentHistories TreatmentHistory[]
+  billings           Billing[]
+  patientAllergies   PatientAllergy[]
+  appointments       Appointment[]
+  address            Address?
+  insurance          Insurance?
+
+  @@map("patient")
+}
+
+model Address {
+  id          String  @id @default(uuid())
+  addressLine String  @map("address_line")
+  ward        String
+  district    String
+  city        String
+  patientId   String  @unique @map("patient_id")
+  patient     Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("address")
+}
+
+model Insurance {
+  code        String   @id
+  expiredDate DateTime @map("expired_date")
+  patientId   String   @unique @map("patient_id")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("insurance")
+}
+
+model Allergy {
+  id               String           @id @default(uuid())
+  allergen         String
+  symptoms         String
+  category         String
+  patientAllergies PatientAllergy[]
+
+  @@map("allergy")
+}
+
+model PatientAllergy {
+  patientId String  @map("patient_id")
+  allergyId String  @map("allergy_id")
+  severity  String
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  allergy   Allergy @relation(fields: [allergyId], references: [id], onDelete: Cascade)
+
+  @@id([patientId, allergyId])
+  @@map("patient_allergy")
+}
+
+model TreatmentHistory {
+  id          String      @id @default(uuid())
+  type        String
+  disease     String
+  visitedDate DateTime    @map("visited_date")
+  patientId   String      @map("patient_id")
+  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  admissions  Admission[]
+  procedures  Procedure[]
+  billing     Billing?
+
+  @@map("treatment_history")
+}
+
+model Admission {
+  id                 String           @id @default(uuid())
+  status             String
+  admittedDate       DateTime         @map("admitted_date")
+  dischargedDate     DateTime         @map("discharged_date")
+  roomType           String           @map("room_type")
+  price              Float
+  treatmentHistoryId String           @map("treatment_history_id")
+  treatmentHistory   TreatmentHistory @relation(fields: [treatmentHistoryId], references: [id], onDelete: Cascade)
+
+  @@map("admission")
+}
+
+model Billing {
+  id                 String           @id @default(uuid())
+  amount             Float
+  billingDate        DateTime         @map("billing_date")
+  dueDate            DateTime         @map("due_date")
+  paymentStatus      String           @map("payment_status")
+  treatmentHistoryId String           @unique @map("treatment_history_id")
+  treatmentHistory   TreatmentHistory @relation(fields: [treatmentHistoryId], references: [id], onDelete: Cascade)
+  patientId          String           @map("patient_id")
+  patient            Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("billing")
+}
+
+model Staff {
+  id                  String              @id @default(uuid())
+  firstName           String              @map("first_name")
+  lastName            String              @map("last_name")
+  dob                 DateTime
+  jobType             String              @map("job_type")
+  salary              Float
+  hiredDate           DateTime            @map("hired_date")
+  departmentId        String?             @map("department_id")
+  department          Department?         @relation("StaffToDepartment", fields: [departmentId], references: [id])
+  manageDepartment    Department?         @relation("DepartmentManager")
+  qualifications      Qualification[]
+  shifts              ShiftStaff[]
+  procedures          Procedure[]
+  appointments        Appointment[]
+  employmentHistories EmploymentHistory[]
+
+  @@map("staff")
+}
+
+model Department {
+  id                          String              @id @default(uuid())
+  name                        String
+  managerId                   String?             @unique @map("manager_id")
+  manager                     Staff?              @relation("DepartmentManager", fields: [managerId], references: [id])
+  staffs                      Staff[]             @relation("StaffToDepartment")
+  previousEmploymentHistories EmploymentHistory[] @relation("PreviousDepartment")
+  currentEmploymentHistories  EmploymentHistory[] @relation("CurrentDepartment")
+
+  @@map("department")
+}
+
+model Qualification {
+  id        String   @id @default(uuid())
+  name      String
+  provider  String
+  issueDate DateTime @map("issue_date")
+  staffId   String   @map("staff_id")
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@map("qualification")
+}
+
+model Shift {
+  id        String       @id @default(uuid())
+  dayOfWeek String       @map("day_of_week")
+  startHour DateTime     @map("start_hour")
+  endHour   DateTime     @map("end_hour")
+  staff     ShiftStaff[]
+
+  @@map("shift")
+}
+
+model ShiftStaff {
+  staffId String @map("staff_id")
+  shiftId String @map("shift_id")
+  staff   Staff  @relation(fields: [staffId], references: [id])
+  shift   Shift  @relation(fields: [shiftId], references: [id])
+
+  @@id([staffId, shiftId])
+  @@map("shift_staff")
+}
+
+model Medicine {
+  id         String      @id @default(uuid())
+  name       String
+  price      Float
+  effect     String
+  sideEffect String      @map("side_effect")
+  procedures Procedure[]
+
+  @@map("medicine")
+}
+
+model Procedure {
+  id                 String           @id @default(uuid())
+  price              Float
+  category           String
+  medicineQuantity   Int?             @map("medicine_quantity")
+  performedDate      DateTime         @map("performed_date")
+  medicineId         String           @map("medicine_id")
+  staffId            String           @map("staff_id")
+  treatmentHistoryId String           @map("treatment_history_id")
+  medicine           Medicine         @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  staff              Staff            @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  treatmentHistory   TreatmentHistory @relation(fields: [treatmentHistoryId], references: [id], onDelete: Cascade)
+
+  @@map("procedure")
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  purpose   String
+  status    String
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  patientId String   @map("patient_id")
+  staffId   String   @map("staff_id")
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@map("appointment")
+}
+
+model EmploymentHistory {
+  id                   String     @id @default(uuid())
+  appliedDate          DateTime   @map("applied_date")
+  previousSalary       Float      @map("previous_salary")
+  currentSalary        Float      @map("current_salary")
+  previousJobTitle     String     @map("previous_job_title")
+  currentJobTitle      String     @map("current_job_title")
+  previousDepartmentId String     @map("previous_department_id")
+  currentDepartmentId  String     @map("current_department_id")
+  staffId              String     @map("staff_id")
+  previousDepartment   Department @relation("PreviousDepartment", fields: [previousDepartmentId], references: [id])
+  currentDepartment    Department @relation("CurrentDepartment", fields: [currentDepartmentId], references: [id])
+  staff                Staff      @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@map("employment_history")
+}
