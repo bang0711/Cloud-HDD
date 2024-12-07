@@ -5,6 +5,7 @@ import prisma from "../lib/prisma";
 const patientLimit = t.Object({
   page: t.Number(),
   count: t.Number(),
+  name: t.String(),
 });
 
 const patientInput = t.Object({
@@ -47,10 +48,30 @@ type AllergyInput = typeof allergyInput.static;
 type TreatmentInput = typeof treatmentInput.static;
 
 // Function to get all patients with pagination
-const getAllPatients = async ({ page = 1, count = 5 }: PatientLimit) => {
+const getAllPatients = async ({
+  page = 1,
+  count = 5,
+  name = "",
+}: PatientLimit) => {
   const patients = await prisma.patient.findMany({
     skip: (page - 1) * count,
     take: count,
+    where: {
+      OR: [
+        {
+          firstName: {
+            contains: name,
+            mode: "insensitive",
+          },
+        },
+        {
+          lastName: {
+            contains: name,
+            mode: "insensitive",
+          },
+        },
+      ],
+    },
     include: {
       address: true,
       insurance: true,
@@ -114,14 +135,27 @@ const createPatient = async (data: PatientInput) => {
 
 // Function to update a patient
 const updatePatient = async (id: string, data: Partial<PatientInput>) => {
+  const patient = await getPatientById(id);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.patient.update({
     where: { id },
-    data,
+    data: {
+      ...data,
+      ...(data.dob && { dob: new Date(data.dob) }),
+    },
   });
 };
 
 // Function to delete a patient
 const deletePatient = async (id: string) => {
+  const patient = await getPatientById(id);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.patient.delete({
     where: { id },
   });
@@ -129,15 +163,20 @@ const deletePatient = async (id: string) => {
 
 // Function to upsert patient address
 const upsertPatientAddress = async (patientId: string, data: AddressInput) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.address.upsert({
     where: {
       patientId,
     },
+    update: data,
     create: {
       ...data,
       patientId,
     },
-    update: data,
   });
 };
 
@@ -146,38 +185,50 @@ const upsertPatientInsurance = async (
   patientId: string,
   data: InsuranceInput
 ) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.insurance.upsert({
     where: {
-      patientId,
-    },
-    create: {
-      ...data,
-      expiredDate: new Date(data.expiredDate),
       patientId,
     },
     update: {
       ...data,
       expiredDate: new Date(data.expiredDate),
     },
+    create: {
+      ...data,
+      expiredDate: new Date(data.expiredDate),
+      patientId,
+    },
   });
 };
 
 // Function to add patient allergy
 const addPatientAllergy = async (patientId: string, data: AllergyInput) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.patientAllergy.create({
     data: {
       patientId,
       allergyId: data.allergyId,
       severity: data.severity,
     },
-    include: {
-      allergy: true,
-    },
   });
 };
 
 // Function to remove patient allergy
 const removePatientAllergy = async (patientId: string, allergyId: string) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.patientAllergy.delete({
     where: {
       patientId_allergyId: {
@@ -190,12 +241,30 @@ const removePatientAllergy = async (patientId: string, allergyId: string) => {
 
 // Function to add treatment history
 const addTreatmentHistory = async (patientId: string, data: TreatmentInput) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
   return await prisma.treatmentHistory.create({
     data: {
-      patientId,
-      type: data.type,
-      disease: data.disease,
+      ...data,
       visitedDate: new Date(data.visitedDate),
+      patientId,
+    },
+  });
+};
+
+// Function to get treatment history
+const getTreatmentHistory = async (patientId: string) => {
+  const patient = await getPatientById(patientId);
+  if (!patient) {
+    throw new Error("Patient not found");
+  }
+
+  return await prisma.treatmentHistory.findMany({
+    where: {
+      patientId,
     },
   });
 };
@@ -212,6 +281,7 @@ export {
   addPatientAllergy,
   removePatientAllergy,
   addTreatmentHistory,
+  getTreatmentHistory,
   // Export types
   patientLimit,
   patientInput,

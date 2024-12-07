@@ -17,6 +17,7 @@ import {
   insuranceInput,
   allergyInput,
   treatmentInput,
+  getTreatmentHistory,
 } from "../services/patient.service";
 
 export const PatientRouter = new Elysia({ prefix: "/patients" })
@@ -24,8 +25,9 @@ export const PatientRouter = new Elysia({ prefix: "/patients" })
   .get("/", async ({ query }) => {
     const page = parseInt(query.page || "1");
     const count = parseInt(query.count || "5");
+    const name = query.name || "";
 
-    return await getAllPatients({ page, count });
+    return await getAllPatients({ page, count, name });
   })
   // Get patient by ID
   .get("/:id", async ({ params, set }) => {
@@ -118,10 +120,22 @@ export const PatientRouter = new Elysia({ prefix: "/patients" })
     try {
       const data = treatmentInput.parse(body);
       const treatment = await addTreatmentHistory(params.id, data);
+
       set.status = "Created";
       return treatment;
     } catch (error) {
       set.status = "Bad Request";
       return { message: "Invalid treatment data", statusCode: 400, error };
+    }
+  })
+  // Get treatment history
+  .get("/:id/treatments", async ({ params, set }) => {
+    try {
+      const treatment = await getTreatmentHistory(params.id);
+      console.log(treatment);
+      return treatment;
+    } catch (error) {
+      set.status = "Not Found";
+      return { message: "Treatment history not found", statusCode: 404, error };
     }
   });
