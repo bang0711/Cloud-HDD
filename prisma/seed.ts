@@ -1,8 +1,8 @@
 import { Patient, PrismaClient, Staff } from "@prisma/client";
 
-import { fa, faker } from "@faker-js/faker";
+import { faker } from "@faker-js/faker";
 
-import { allergens, departments } from "./data";
+import { allergens, departments, medicines } from "./data";
 
 const prisma = new PrismaClient();
 
@@ -161,6 +161,12 @@ const main = async () => {
   // Wait for all address creation to finish
   await Promise.all(promises);
   console.log("Addresses and insurances created.");
+
+  console.log("Creating medicines...");
+  await prisma.medicine.createMany({
+    data: medicines,
+  });
+  console.log("Medicines created.");
 
   console.log("Seeding complete.");
 };
