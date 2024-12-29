@@ -87,7 +87,7 @@ const getAllPatients = async ({
 
   return {
     data: patients,
-    meta: {
+    pagination: {
       total,
       page,
       count,
@@ -104,15 +104,39 @@ const getPatientById = async (id: string) => {
       address: true,
       insurance: true,
       patientAllergies: {
-        include: {
-          allergy: true,
+        select: {
+          severity: true,
+          allergy: {
+            select: {
+              allergen: true,
+              category: true,
+              symptoms: true,
+            },
+          },
         },
       },
       treatmentHistories: {
         include: {
           admissions: true,
-          procedures: true,
+          procedures: {
+            include: {
+              staff: true,
+              medicine: true,
+            },
+          },
           billing: true,
+        },
+      },
+      appointments: {
+        include: {
+          staff: {
+            select: {
+              id: true,
+              lastName: true,
+              jobType: true,
+              firstName: true,
+            },
+          },
         },
       },
     },

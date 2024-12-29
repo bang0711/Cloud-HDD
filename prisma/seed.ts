@@ -1,75 +1,22 @@
-import { Patient, PrismaClient, Staff } from "@prisma/client";
+import { Patient, PatientAllergy, PrismaClient, Staff } from "@prisma/client";
 
 import { faker } from "@faker-js/faker";
 
 import { allergens, departments, medicines } from "./data";
 
+import {
+  reset,
+  generateDepartment,
+  generateRandomStaff,
+  generateRandomPatient,
+  generateRandomAddress,
+  generateRandomInsurance,
+  generateRandomAppointment,
+  generateRandomTreatmentHistory,
+  generateRandomPatientAllergy,
+} from "./functions";
+
 const prisma = new PrismaClient();
-
-const reset = async () => {
-  await Promise.all([
-    prisma.patient.deleteMany(),
-    prisma.department.deleteMany(),
-    prisma.allergy.deleteMany(),
-    prisma.staff.deleteMany(),
-  ]);
-};
-// Generate a random blood type
-const getRandomBloodType = () => {
-  const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-  const randomIndex = Math.floor(Math.random() * bloodTypes.length);
-  return bloodTypes[randomIndex];
-};
-
-// Generate a random address for a patient
-const generateRandomAddress = () => {
-  return {
-    addressLine: faker.location.streetAddress(),
-    ward: faker.location.state(),
-    district: faker.location.state(),
-    city: faker.location.city(),
-  };
-};
-
-const generateRandomInsurance = () => {
-  return {
-    code: faker.string.uuid(),
-    expiredDate: faker.date.future(),
-  };
-};
-
-const generateRandomPatient = async (): Promise<Patient> => {
-  return {
-    firstName: faker.person.firstName(),
-    lastName: faker.person.lastName(),
-    dob: faker.date.birthdate(),
-    gender: faker.person.sex(),
-    bloodType: getRandomBloodType(),
-    cid: faker.string.uuid(),
-    id: faker.string.uuid(),
-  };
-};
-
-// Generate a random staff with jobType (Doctor/Nurse)
-const generateRandomStaff = (jobType: "Doctor" | "Nurse"): Staff => {
-  return {
-    id: faker.string.uuid(),
-    firstName: faker.person.firstName(),
-    lastName: faker.person.lastName(),
-    dob: faker.date.birthdate(),
-    jobType,
-    salary: faker.number.float(),
-    hiredDate: faker.date.past(),
-    departmentId: null,
-  };
-};
-
-const generateDepartment = (name: string) => {
-  return {
-    name,
-    id: faker.string.uuid(),
-  };
-};
 
 const main = async () => {
   console.log("Resetting database...");
@@ -79,15 +26,12 @@ const main = async () => {
   console.log("Seeding...");
 
   console.log("Creating allergies...");
-
   await prisma.allergy.createMany({
     data: allergens,
   });
-
   console.log("Allergies created.");
 
   console.log("Creating departments...");
-
   await Promise.all(
     departments.map(async (d) => {
       const department = generateDepartment(d.name);
@@ -121,19 +65,17 @@ const main = async () => {
       });
     })
   );
-
   console.log("Departments created.");
 
+  console.log("Creating patients...");
   const patients = await Promise.all(
     faker.helpers.multiple(generateRandomPatient, { count: 100 })
   );
 
-  console.log("Creating patients...");
   // Create patients in the database
   await prisma.patient.createMany({
     data: patients,
   });
-
   console.log("Patients created:");
 
   console.log("Creating addresses and insurances...");
@@ -157,7 +99,6 @@ const main = async () => {
       }),
     ]);
   });
-
   // Wait for all address creation to finish
   await Promise.all(promises);
   console.log("Addresses and insurances created.");
@@ -167,6 +108,73 @@ const main = async () => {
     data: medicines,
   });
   console.log("Medicines created.");
+
+  console.log("Creating appointments...");
+  const staffs = await prisma.staff.findMany();
+
+  const appointments = patients.map((patient) => {
+    // Randomly select a staff (doctor) for the appointment
+    const staff = faker.helpers.arrayElement(staffs);
+    return generateRandomAppointment(patient.id, staff.id);
+  });
+
+  await prisma.appointment.createMany({ data: appointments });
+  console.log("Appointments created.");
+
+  console.log("Creating treatment histories...");
+  const treatmentHistories = patients.map((patient) =>
+    generateRandomTreatmentHistory(patient.id)
+  );
+  await prisma.treatmentHistory.createMany({ data: treatmentHistories });
+  console.log("Treatment histories created.");
+
+  // Seed patient allergies
+  console.log("Creating patient allergies...");
+  const allergies = await prisma.allergy.findMany();
+
+  const patientAllergies: PatientAllergy[] = [];
+
+  patients.forEach((patient) => {
+    // Randomly assign up to 3 allergies to each patient
+    const assignedAllergies = faker.helpers.arrayElements(allergies, 3);
+
+    assignedAllergies.forEach((allergy) => {
+      patientAllergies.push(
+        generateRandomPatientAllergy(patient.id, allergy.id)
+      );
+    });
+  });
+
+  await prisma.patientAllergy.createMany({ data: patientAllergies });
+  console.log("Patient allergies created.");
+
+  console.log("Creating procedures...");
+  const allMedicines = await prisma.medicine.findMany();
+  const allTreatmentHistories = await prisma.treatmentHistory.findMany();
+
+  const procedures = allTreatmentHistories.flatMap((treatmentHistory) => {
+    // Generate random number of procedures for each treatment history
+    const procedureCount = faker.number.int({ min: 1, max: 5 });
+
+    return Array.from({ length: procedureCount }).map(() => {
+      const medicine = faker.helpers.arrayElement(allMedicines);
+      const staff = faker.helpers.arrayElement(staffs);
+
+      return {
+        id: faker.string.uuid(),
+        price: faker.number.float({ min: 50, max: 500 }),
+        category: faker.lorem.word(),
+        medicineQuantity: faker.number.int({ min: 1, max: 10 }),
+        performedDate: faker.date.recent(),
+        medicineId: medicine.id,
+        staffId: staff.id,
+        treatmentHistoryId: treatmentHistory.id,
+      };
+    });
+  });
+
+  await prisma.procedure.createMany({ data: procedures });
+  console.log("Procedures created.");
 
   console.log("Seeding complete.");
 };

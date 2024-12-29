@@ -102,10 +102,11 @@ const getAllStaff = async ({ page, count, name }: StaffLimit) => {
 
   return {
     data: staff,
-    meta: {
+    pagination: {
       total,
       page,
       count,
+      totalPages: Math.ceil(total / count),
     },
   };
 };
