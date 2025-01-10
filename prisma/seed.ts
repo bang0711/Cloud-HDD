@@ -2,7 +2,7 @@ import { Patient, PatientAllergy, PrismaClient, Staff } from "@prisma/client";
 
 import { faker } from "@faker-js/faker";
 
-import { allergens, departments, medicines } from "./data";
+import { allergens, departments, medicines, shifts } from "./data";
 
 import {
   reset,
@@ -103,31 +103,6 @@ const main = async () => {
   await Promise.all(promises);
   console.log("Addresses and insurances created.");
 
-  console.log("Creating medicines...");
-  await prisma.medicine.createMany({
-    data: medicines,
-  });
-  console.log("Medicines created.");
-
-  console.log("Creating appointments...");
-  const staffs = await prisma.staff.findMany();
-
-  const appointments = patients.map((patient) => {
-    // Randomly select a staff (doctor) for the appointment
-    const staff = faker.helpers.arrayElement(staffs);
-    return generateRandomAppointment(patient.id, staff.id);
-  });
-
-  await prisma.appointment.createMany({ data: appointments });
-  console.log("Appointments created.");
-
-  console.log("Creating treatment histories...");
-  const treatmentHistories = patients.map((patient) =>
-    generateRandomTreatmentHistory(patient.id)
-  );
-  await prisma.treatmentHistory.createMany({ data: treatmentHistories });
-  console.log("Treatment histories created.");
-
   // Seed patient allergies
   console.log("Creating patient allergies...");
   const allergies = await prisma.allergy.findMany();
@@ -148,33 +123,61 @@ const main = async () => {
   await prisma.patientAllergy.createMany({ data: patientAllergies });
   console.log("Patient allergies created.");
 
-  console.log("Creating procedures...");
-  const allMedicines = await prisma.medicine.findMany();
-  const allTreatmentHistories = await prisma.treatmentHistory.findMany();
-
-  const procedures = allTreatmentHistories.flatMap((treatmentHistory) => {
-    // Generate random number of procedures for each treatment history
-    const procedureCount = faker.number.int({ min: 1, max: 5 });
-
-    return Array.from({ length: procedureCount }).map(() => {
-      const medicine = faker.helpers.arrayElement(allMedicines);
-      const staff = faker.helpers.arrayElement(staffs);
-
-      return {
-        id: faker.string.uuid(),
-        price: faker.number.float({ min: 50, max: 500 }),
-        category: faker.lorem.word(),
-        medicineQuantity: faker.number.int({ min: 1, max: 10 }),
-        performedDate: faker.date.recent(),
-        medicineId: medicine.id,
-        staffId: staff.id,
-        treatmentHistoryId: treatmentHistory.id,
-      };
-    });
+  console.log("Creating shifts...");
+  await prisma.shift.createMany({
+    data: shifts,
   });
+  console.log("Shifts created");
 
-  await prisma.procedure.createMany({ data: procedures });
-  console.log("Procedures created.");
+  console.log("Assigning staff to shifts...");
+
+  // Fetch all shifts and staff from the database
+  const allShifts = await prisma.shift.findMany();
+  const allStaff = await prisma.staff.findMany();
+
+  // Assign each staff member to at least 10 shifts
+  await Promise.all(
+    allStaff.map(async (staff) => {
+      // Randomly select 10 unique shifts for each staff
+      const assignedShifts = faker.helpers.arrayElements(allShifts, 10);
+
+      // Create `ShiftStaff` entries for the selected shifts
+      const shiftStaffAssignments = assignedShifts.map((shift) => ({
+        staffId: staff.id,
+        shiftId: shift.id,
+      }));
+
+      await prisma.shiftStaff.createMany({
+        data: shiftStaffAssignments,
+      });
+    })
+  );
+
+  // Optionally, ensure that all shifts still have at least 10 staff members
+  await Promise.all(
+    allShifts.map(async (shift) => {
+      const currentAssignments = await prisma.shiftStaff.count({
+        where: { shiftId: shift.id },
+      });
+
+      if (currentAssignments < 10) {
+        const additionalStaff = faker.helpers.arrayElements(
+          allStaff,
+          10 - currentAssignments
+        );
+        const additionalAssignments = additionalStaff.map((staff) => ({
+          staffId: staff.id,
+          shiftId: shift.id,
+        }));
+
+        await prisma.shiftStaff.createMany({
+          data: additionalAssignments,
+        });
+      }
+    })
+  );
+
+  console.log("Staff assigned to shifts.");
 
   console.log("Seeding complete.");
 };

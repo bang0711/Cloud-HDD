@@ -10,14 +10,11 @@ import {
   upsertPatientInsurance,
   addPatientAllergy,
   removePatientAllergy,
-  addTreatmentHistory,
   // Types
   patientInput,
   addressInput,
   insuranceInput,
   allergyInput,
-  treatmentInput,
-  getTreatmentHistory,
 } from "../services/patient.service";
 
 export const PatientRouter = new Elysia({ prefix: "/patients" })
@@ -41,19 +38,25 @@ export const PatientRouter = new Elysia({ prefix: "/patients" })
     return patient;
   })
   // Create new patient
-  .post("/", async ({ body, set }) => {
-    try {
-      const data = patientInput.parse(body);
-      const patient = await createPatient(data);
+  .post(
+    "/",
+    async ({ body, set }) => {
+      try {
+        // Pass the validated body directly to createPatient
+        const patient = await createPatient(body);
+        set.status = "Created";
 
-      set.status = "Created";
-
-      return patient;
-    } catch (error) {
-      set.status = "Bad Request";
-      return { message: "Invalid patient data", statusCode: 400, error };
+        return patient;
+      } catch (error) {
+        set.status = "Bad Request";
+        console.error(error);
+        return { message: "Invalid patient data", statusCode: 400, error };
+      }
+    },
+    {
+      body: patientInput, // Validation schema for the body
     }
-  })
+  )
   // Update patient
   .put("/:id", async ({ params, body, set }) => {
     try {
@@ -114,28 +117,4 @@ export const PatientRouter = new Elysia({ prefix: "/patients" })
   .delete("/:id/allergies/:allergyId", async ({ params }) => {
     await removePatientAllergy(params.id, params.allergyId);
     return { message: "Allergy removed successfully" };
-  })
-  // Add treatment history
-  .post("/:id/treatments", async ({ params, body, set }) => {
-    try {
-      const data = treatmentInput.parse(body);
-      const treatment = await addTreatmentHistory(params.id, data);
-
-      set.status = "Created";
-      return treatment;
-    } catch (error) {
-      set.status = "Bad Request";
-      return { message: "Invalid treatment data", statusCode: 400, error };
-    }
-  })
-  // Get treatment history
-  .get("/:id/treatments", async ({ params, set }) => {
-    try {
-      const treatment = await getTreatmentHistory(params.id);
-      console.log(treatment);
-      return treatment;
-    } catch (error) {
-      set.status = "Not Found";
-      return { message: "Treatment history not found", statusCode: 404, error };
-    }
   });

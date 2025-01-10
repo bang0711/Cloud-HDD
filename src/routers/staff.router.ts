@@ -8,7 +8,6 @@ import {
   deleteStaff,
   addStaffQualification,
   removeStaffQualification,
-  addEmploymentHistory,
   assignShift,
   removeShiftAssignment,
   // Types
@@ -24,8 +23,9 @@ export const StaffRouter = new Elysia({ prefix: "/staff" })
     const page = parseInt(query.page || "1");
     const count = parseInt(query.count || "5");
     const name = query.name || "";
+    const department = query.department || "";
 
-    return await getAllStaff({ page, count, name });
+    return await getAllStaff({ page, count, name, department });
   })
   // Get staff by ID
   .get("/:id", async ({ params, set }) => {
@@ -38,23 +38,23 @@ export const StaffRouter = new Elysia({ prefix: "/staff" })
 
     return staff;
   })
-  // Create new staff member
-  .post("/", async ({ body, set }) => {
-    try {
-      const data = staffInput.parse(body);
-      const staff = await createStaff(data);
-
-      set.status = "Created";
-      return staff;
-    } catch (error) {
-      set.status = "Bad Request";
-      return {
-        message: "Invalid staff data",
-        error,
-        statusCode: 400,
-      };
+  // Create new staff
+  .post(
+    "/",
+    async ({ body, set }) => {
+      try {
+        const staff = await createStaff(body);
+        set.status = "Created";
+        return staff;
+      } catch (error) {
+        set.status = "Bad Request";
+        return { message: "Invalid staff data", statusCode: 400, error };
+      }
+    },
+    {
+      body: staffInput,
     }
-  })
+  )
   // Update staff member
   .put("/:id", async ({ params, body, set }) => {
     try {
@@ -116,23 +116,7 @@ export const StaffRouter = new Elysia({ prefix: "/staff" })
       };
     }
   })
-  // Add employment history
-  .post("/:id/employment-history", async ({ params, body, set }) => {
-    try {
-      const data = employmentHistoryInput.parse(body);
-      const history = await addEmploymentHistory(params.id, data);
 
-      set.status = "Created";
-      return history;
-    } catch (error) {
-      set.status = "Bad Request";
-      return {
-        message: "Invalid employment history data",
-        error,
-        statusCode: 400,
-      };
-    }
-  })
   // Assign shift to staff
   .post("/:id/shifts", async ({ params, body, set }) => {
     try {

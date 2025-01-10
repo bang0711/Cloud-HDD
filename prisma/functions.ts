@@ -4,14 +4,22 @@ import prisma from "../src/lib/prisma";
 
 export const reset = async () => {
   await Promise.all([
-    prisma.patient.deleteMany(),
+    prisma.shiftStaff.deleteMany(), // Delete ShiftStaff first
+    prisma.patientAllergy.deleteMany(),
+    prisma.insurance.deleteMany(),
+    prisma.address.deleteMany(),
+  ]);
+
+  await Promise.all([
+    prisma.shift.deleteMany(), // Delete Shift after ShiftStaff
+    prisma.staff.deleteMany(),
     prisma.department.deleteMany(),
     prisma.allergy.deleteMany(),
-    prisma.staff.deleteMany(),
-    prisma.appointment.deleteMany(),
-    prisma.treatmentHistory.deleteMany(),
+    prisma.patient.deleteMany(),
+    prisma.qualification.deleteMany(),
   ]);
 };
+
 // Generate a random blood type
 export const getRandomBloodType = () => {
   const bloodTypes = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -45,6 +53,7 @@ export const generateRandomPatient = async (): Promise<Patient> => {
     bloodType: getRandomBloodType(),
     cid: faker.string.uuid(),
     id: faker.string.uuid(),
+    createdAt: faker.date.recent(),
   };
 };
 

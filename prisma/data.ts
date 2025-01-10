@@ -720,3 +720,90 @@ export const medicines = [
     price: 8.0,
   },
 ];
+
+export const shifts = [
+  {
+    dayOfWeek: "Monday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Monday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Monday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Tuesday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Tuesday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Tuesday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Wednesday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Wednesday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Wednesday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Thursday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Thursday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Thursday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Friday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Friday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Friday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Saturday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Saturday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Saturday",
+    time: "Night Shift",
+  },
+  {
+    dayOfWeek: "Sunday",
+    time: "Morning Shift",
+  },
+  {
+    dayOfWeek: "Sunday",
+    time: "Afternoon Shift",
+  },
+  {
+    dayOfWeek: "Sunday",
+    time: "Night Shift",
+  },
+];

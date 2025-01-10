@@ -56,6 +56,9 @@ const getAllPatients = async ({
   const patients = await prisma.patient.findMany({
     skip: (page - 1) * count,
     take: count,
+    orderBy: {
+      createdAt: "desc",
+    },
     where: {
       OR: [
         {
@@ -111,30 +114,6 @@ const getPatientById = async (id: string) => {
               allergen: true,
               category: true,
               symptoms: true,
-            },
-          },
-        },
-      },
-      treatmentHistories: {
-        include: {
-          admissions: true,
-          procedures: {
-            include: {
-              staff: true,
-              medicine: true,
-            },
-          },
-          billing: true,
-        },
-      },
-      appointments: {
-        include: {
-          staff: {
-            select: {
-              id: true,
-              lastName: true,
-              jobType: true,
-              firstName: true,
             },
           },
         },
@@ -263,36 +242,6 @@ const removePatientAllergy = async (patientId: string, allergyId: string) => {
   });
 };
 
-// Function to add treatment history
-const addTreatmentHistory = async (patientId: string, data: TreatmentInput) => {
-  const patient = await getPatientById(patientId);
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-
-  return await prisma.treatmentHistory.create({
-    data: {
-      ...data,
-      visitedDate: new Date(data.visitedDate),
-      patientId,
-    },
-  });
-};
-
-// Function to get treatment history
-const getTreatmentHistory = async (patientId: string) => {
-  const patient = await getPatientById(patientId);
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-
-  return await prisma.treatmentHistory.findMany({
-    where: {
-      patientId,
-    },
-  });
-};
-
 // Export all functions
 export {
   getAllPatients,
@@ -304,8 +253,7 @@ export {
   upsertPatientInsurance,
   addPatientAllergy,
   removePatientAllergy,
-  addTreatmentHistory,
-  getTreatmentHistory,
+
   // Export types
   patientLimit,
   patientInput,

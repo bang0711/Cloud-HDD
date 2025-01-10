@@ -6,6 +6,7 @@ const staffLimit = t.Object({
   page: t.Number(),
   count: t.Number(),
   name: t.String(),
+  department: t.Optional(t.String()),
 });
 
 const staffInput = t.Object({
@@ -14,9 +15,7 @@ const staffInput = t.Object({
   dob: t.String(),
   jobType: t.String(),
   salary: t.Number(),
-  hiredDate: t.String(),
   departmentId: t.String(),
-  managerId: t.Optional(t.String()),
 });
 
 const qualificationInput = t.Object({
@@ -46,24 +45,28 @@ type EmploymentHistoryInput = typeof employmentHistoryInput.static;
 type ShiftAssignmentInput = typeof shiftAssignmentInput.static;
 
 // Function to get all staff with pagination
-const getAllStaff = async ({ page, count, name }: StaffLimit) => {
+const getAllStaff = async ({ page, count, name, department }: StaffLimit) => {
   const skip = (page - 1) * count;
   const take = count;
-
-  const where = name
-    ? {
-        OR: [
-          { firstName: { contains: name } },
-          { lastName: { contains: name } },
-        ],
-      }
-    : {};
 
   const [staff, total] = await Promise.all([
     prisma.staff.findMany({
       skip,
       take,
-      where,
+      where: {
+        AND: {
+          OR: [
+            { firstName: { contains: name, mode: "insensitive" } },
+            { lastName: { contains: name, mode: "insensitive" } },
+          ],
+          department: {
+            name: {
+              contains: department === "All" ? "" : department,
+              mode: "insensitive",
+            },
+          },
+        },
+      },
       include: {
         department: {
           select: {
@@ -94,10 +97,21 @@ const getAllStaff = async ({ page, count, name }: StaffLimit) => {
         },
       },
       orderBy: {
-        firstName: "asc",
+        hiredDate: "desc",
       },
     }),
-    prisma.staff.count({ where }),
+
+    prisma.staff.count({
+      where: {
+        OR: [
+          { firstName: { contains: name, mode: "insensitive" } },
+          { lastName: { contains: name, mode: "insensitive" } },
+        ],
+        department: {
+          name: { contains: department, mode: "insensitive" },
+        },
+      },
+    }),
   ]);
 
   return {
@@ -113,20 +127,35 @@ const getAllStaff = async ({ page, count, name }: StaffLimit) => {
 
 // Function to get a staff member by ID with all related data
 const getStaffById = async (id: string) => {
-  return await prisma.staff.findUnique({
+  const staff = await prisma.staff.findUnique({
     where: { id },
     include: {
       department: true,
       manageDepartment: true,
       qualifications: true,
-      employmentHistories: true,
       shifts: {
-        include: {
-          shift: true,
+        select: {
+          shift: {
+            select: {
+              dayOfWeek: true,
+              time: true,
+            },
+          },
         },
       },
     },
   });
+
+  // Format the shifts data and add it as a new property
+  const shifts = staff?.shifts.map((shift) => ({
+    dayOfWeek: shift.shift.dayOfWeek,
+    time: shift.shift.time,
+  }));
+
+  return {
+    ...staff,
+    shifts,
+  };
 };
 
 // Function to create a new staff member
@@ -135,7 +164,6 @@ const createStaff = async (data: StaffInput) => {
     data: {
       ...data,
       dob: new Date(data.dob),
-      hiredDate: new Date(data.hiredDate),
     },
     include: {
       department: true,
@@ -155,7 +183,6 @@ const updateStaff = async (id: string, data: Partial<StaffInput>) => {
     data: {
       ...data,
       ...(data.dob && { dob: new Date(data.dob) }),
-      ...(data.hiredDate && { hiredDate: new Date(data.hiredDate) }),
     },
     include: {
       department: true,
@@ -164,12 +191,39 @@ const updateStaff = async (id: string, data: Partial<StaffInput>) => {
 };
 
 // Function to delete a staff member
+// Function to delete a staff member and related data
 const deleteStaff = async (id: string) => {
-  const staff = await getStaffById(id);
+  const staff = await prisma.staff.findUnique({
+    where: { id },
+    include: {
+      qualifications: true,
+      shifts: true,
+      manageDepartment: true,
+    },
+  });
+
   if (!staff) {
     throw new Error("Staff member not found");
   }
 
+  // Delete related data first
+  await prisma.qualification.deleteMany({
+    where: { staffId: id },
+  });
+
+  await prisma.shiftStaff.deleteMany({
+    where: { staffId: id },
+  });
+
+  // If the staff member is a manager, unset the managerId in their department
+  if (staff.manageDepartment) {
+    await prisma.department.update({
+      where: { id: staff.manageDepartment.id },
+      data: { managerId: null },
+    });
+  }
+
+  // Finally, delete the staff member
   return await prisma.staff.delete({
     where: { id },
   });
@@ -207,25 +261,6 @@ const removeStaffQualification = async (
   return await prisma.qualification.delete({
     where: {
       id: qualificationId,
-      staffId,
-    },
-  });
-};
-
-// Function to add employment history
-const addEmploymentHistory = async (
-  staffId: string,
-  data: EmploymentHistoryInput
-) => {
-  const staff = await getStaffById(staffId);
-  if (!staff) {
-    throw new Error("Staff member not found");
-  }
-
-  return await prisma.employmentHistory.create({
-    data: {
-      ...data,
-      appliedDate: new Date(data.appliedDate),
       staffId,
     },
   });
@@ -275,7 +310,6 @@ export {
   deleteStaff,
   addStaffQualification,
   removeStaffQualification,
-  addEmploymentHistory,
   assignShift,
   removeShiftAssignment,
   // Types
