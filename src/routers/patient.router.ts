@@ -42,7 +42,6 @@ export const PatientRouter = new Elysia({ prefix: "/patients" })
     "/",
     async ({ body, set }) => {
       try {
-        // Pass the validated body directly to createPatient
         const patient = await createPatient(body);
         set.status = "Created";
 

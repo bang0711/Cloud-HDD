@@ -75,6 +75,7 @@ model Staff {
   dob              DateTime
   jobType          String       @map("job_type")
   salary           Float
+  image            String
   hiredDate        DateTime     @default(now()) @map("hired_date")
   departmentId     String?      @map("department_id")
   department       Department?  @relation("StaffToDepartment", fields: [departmentId], references: [id])

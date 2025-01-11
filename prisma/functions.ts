@@ -68,6 +68,7 @@ export const generateRandomStaff = (jobType: "Doctor" | "Nurse"): Staff => {
     salary: faker.number.float(),
     hiredDate: faker.date.past(),
     departmentId: null,
+    image: faker.image.avatar(),
   };
 };
 

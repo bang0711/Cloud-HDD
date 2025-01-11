@@ -14,8 +14,9 @@ const staffInput = t.Object({
   lastName: t.String(),
   dob: t.String(),
   jobType: t.String(),
-  salary: t.Number(),
+  salary: t.String(),
   departmentId: t.String(),
+  image: t.String(),
 });
 
 const qualificationInput = t.Object({
@@ -40,8 +41,6 @@ const shiftAssignmentInput = t.Object({
 
 type StaffLimit = typeof staffLimit.static;
 type StaffInput = typeof staffInput.static;
-type QualificationInput = typeof qualificationInput.static;
-type EmploymentHistoryInput = typeof employmentHistoryInput.static;
 type ShiftAssignmentInput = typeof shiftAssignmentInput.static;
 
 // Function to get all staff with pagination
@@ -162,9 +161,7 @@ const createStaff = async (data: StaffInput) => {
     data: {
       ...data,
       dob: new Date(data.dob),
-    },
-    include: {
-      department: true,
+      salary: parseInt(data.salary.toString()),
     },
   });
 };
@@ -180,6 +177,7 @@ const updateStaff = async (id: string, data: Partial<StaffInput>) => {
     where: { id },
     data: {
       ...data,
+      salary: parseInt(data.salary!),
       ...(data.dob && { dob: new Date(data.dob) }),
     },
     include: {

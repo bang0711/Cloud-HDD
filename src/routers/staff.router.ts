@@ -42,10 +42,12 @@ export const StaffRouter = new Elysia({ prefix: "/staff" })
     async ({ body, set }) => {
       try {
         const staff = await createStaff(body);
+
         set.status = "Created";
         return staff;
       } catch (error) {
         set.status = "Bad Request";
+        console.error(error);
         return { message: "Invalid staff data", statusCode: 400, error };
       }
     },
