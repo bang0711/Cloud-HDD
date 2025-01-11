@@ -16,6 +16,7 @@ model Patient {
   dob              DateTime
   gender           String
   bloodType        String           @map("blood_type")
+  image            String
   cid              String
   createdAt        DateTime         @default(now()) @map("created_at")
   patientAllergies PatientAllergy[]
@@ -68,17 +69,16 @@ model PatientAllergy {
 }
 
 model Staff {
-  id               String          @id @default(uuid())
-  firstName        String          @map("first_name")
-  lastName         String          @map("last_name")
+  id               String       @id @default(uuid())
+  firstName        String       @map("first_name")
+  lastName         String       @map("last_name")
   dob              DateTime
-  jobType          String          @map("job_type")
+  jobType          String       @map("job_type")
   salary           Float
-  hiredDate        DateTime        @default(now()) @map("hired_date")
-  departmentId     String?         @map("department_id")
-  department       Department?     @relation("StaffToDepartment", fields: [departmentId], references: [id])
-  manageDepartment Department?     @relation("DepartmentManager")
-  qualifications   Qualification[]
+  hiredDate        DateTime     @default(now()) @map("hired_date")
+  departmentId     String?      @map("department_id")
+  department       Department?  @relation("StaffToDepartment", fields: [departmentId], references: [id])
+  manageDepartment Department?  @relation("DepartmentManager")
   shifts           ShiftStaff[]
 
   @@map("staff")
@@ -92,17 +92,6 @@ model Department {
   staffs    Staff[] @relation("StaffToDepartment")
 
   @@map("department")
-}
-
-model Qualification {
-  id        String   @id @default(uuid())
-  name      String
-  provider  String
-  issueDate DateTime @map("issue_date")
-  staffId   String   @map("staff_id")
-  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
-
-  @@map("qualification")
 }
 
 model Shift {

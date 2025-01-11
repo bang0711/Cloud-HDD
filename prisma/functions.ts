@@ -16,7 +16,6 @@ export const reset = async () => {
     prisma.department.deleteMany(),
     prisma.allergy.deleteMany(),
     prisma.patient.deleteMany(),
-    prisma.qualification.deleteMany(),
   ]);
 };
 
@@ -54,6 +53,7 @@ export const generateRandomPatient = async (): Promise<Patient> => {
     cid: faker.string.uuid(),
     id: faker.string.uuid(),
     createdAt: faker.date.recent(),
+    image: faker.image.avatar(),
   };
 };
 

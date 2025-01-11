@@ -15,6 +15,7 @@ const patientInput = t.Object({
   gender: t.String(),
   bloodType: t.String(),
   cid: t.String(),
+  image: t.String(),
 });
 
 const addressInput = t.Object({
@@ -45,7 +46,6 @@ type PatientInput = typeof patientInput.static;
 type AddressInput = typeof addressInput.static;
 type InsuranceInput = typeof insuranceInput.static;
 type AllergyInput = typeof allergyInput.static;
-type TreatmentInput = typeof treatmentInput.static;
 
 // Function to get all patients with pagination
 const getAllPatients = async ({
@@ -132,6 +132,7 @@ const createPatient = async (data: PatientInput) => {
       gender: data.gender,
       bloodType: data.bloodType,
       cid: data.cid,
+      image: data.image,
     },
   });
 };
