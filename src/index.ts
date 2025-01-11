@@ -7,7 +7,13 @@ import { APIRoute } from "./routers";
 const port = process.env.PORT || 4000;
 
 const app = new Elysia()
-  .use(cors())
+  .use(
+    cors({
+      allowedHeaders: ["*"],
+      origin: ["*"],
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    })
+  )
   .use(
     swagger({
       documentation: {
