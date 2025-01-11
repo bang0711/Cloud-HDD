@@ -6,8 +6,6 @@ import {
   createStaff,
   updateStaff,
   deleteStaff,
-  addStaffQualification,
-  removeStaffQualification,
   assignShift,
   removeShiftAssignment,
   // Types
@@ -80,37 +78,6 @@ export const StaffRouter = new Elysia({ prefix: "/staff" })
       set.status = "Not Found";
       return {
         message: "Staff member not found",
-        error,
-        statusCode: 404,
-      };
-    }
-  })
-  // Add qualification to staff
-  .post("/:id/qualifications", async ({ params, body, set }) => {
-    try {
-      const data = qualificationInput.parse(body);
-      const qualification = await addStaffQualification(params.id, data);
-
-      set.status = "Created";
-      return qualification;
-    } catch (error) {
-      set.status = "Bad Request";
-      return {
-        message: "Invalid qualification data",
-        error,
-        statusCode: 400,
-      };
-    }
-  })
-  // Remove qualification from staff
-  .delete("/:id/qualifications/:qualificationId", async ({ params, set }) => {
-    try {
-      await removeStaffQualification(params.id, params.qualificationId);
-      return { message: "Qualification removed successfully" };
-    } catch (error) {
-      set.status = "Not Found";
-      return {
-        message: "Qualification not found",
         error,
         statusCode: 404,
       };

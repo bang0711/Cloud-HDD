@@ -89,7 +89,6 @@ const getAllStaff = async ({ page, count, name, department }: StaffLimit) => {
             id: true,
           },
         },
-        qualifications: true,
         shifts: {
           include: {
             shift: true,
@@ -132,7 +131,6 @@ const getStaffById = async (id: string) => {
     include: {
       department: true,
       manageDepartment: true,
-      qualifications: true,
       shifts: {
         select: {
           shift: {
@@ -196,7 +194,6 @@ const deleteStaff = async (id: string) => {
   const staff = await prisma.staff.findUnique({
     where: { id },
     include: {
-      qualifications: true,
       shifts: true,
       manageDepartment: true,
     },
@@ -205,11 +202,6 @@ const deleteStaff = async (id: string) => {
   if (!staff) {
     throw new Error("Staff member not found");
   }
-
-  // Delete related data first
-  await prisma.qualification.deleteMany({
-    where: { staffId: id },
-  });
 
   await prisma.shiftStaff.deleteMany({
     where: { staffId: id },
@@ -226,43 +218,6 @@ const deleteStaff = async (id: string) => {
   // Finally, delete the staff member
   return await prisma.staff.delete({
     where: { id },
-  });
-};
-
-// Function to add qualification to staff
-const addStaffQualification = async (
-  staffId: string,
-  data: QualificationInput
-) => {
-  const staff = await getStaffById(staffId);
-  if (!staff) {
-    throw new Error("Staff member not found");
-  }
-
-  return await prisma.qualification.create({
-    data: {
-      ...data,
-      issueDate: new Date(data.issueDate),
-      staffId,
-    },
-  });
-};
-
-// Function to remove qualification from staff
-const removeStaffQualification = async (
-  staffId: string,
-  qualificationId: string
-) => {
-  const staff = await getStaffById(staffId);
-  if (!staff) {
-    throw new Error("Staff member not found");
-  }
-
-  return await prisma.qualification.delete({
-    where: {
-      id: qualificationId,
-      staffId,
-    },
   });
 };
 
@@ -308,8 +263,6 @@ export {
   createStaff,
   updateStaff,
   deleteStaff,
-  addStaffQualification,
-  removeStaffQualification,
   assignShift,
   removeShiftAssignment,
   // Types

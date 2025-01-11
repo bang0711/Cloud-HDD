@@ -6,12 +6,18 @@ import { APIRoute } from "./routers";
 
 const port = process.env.PORT || 4000;
 
-const app = new Elysia()
+const app = new Elysia({})
   .use(
     cors({
-      allowedHeaders: ["*"],
-      origin: ["*"],
-      methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+      allowedHeaders: [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+      ],
+      origin: ["*"], // Allow all origins or restrict to your frontend's domain
+      methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     })
   )
   .use(
