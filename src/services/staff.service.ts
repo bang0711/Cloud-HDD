@@ -1,5 +1,18 @@
 import { t } from "elysia";
+
 import prisma from "../lib/prisma";
+
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+
+const ddbClient = new DynamoDBClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+const docClient = DynamoDBDocumentClient.from(ddbClient);
 
 // Define types for request bodies
 const staffLimit = t.Object({
@@ -123,6 +136,24 @@ const getAllStaff = async ({ page, count, name, department }: StaffLimit) => {
   };
 };
 
+const getQualificationsByStaffId = async (staffId: string) => {
+  try {
+    const result = await docClient.send(
+      new QueryCommand({
+        TableName: "StaffQualifications", // Replace with your DynamoDB table name
+        KeyConditionExpression: "staffId = :staffId",
+        ExpressionAttributeValues: {
+          ":staffId": staffId,
+        },
+      })
+    );
+    return result.Items;
+  } catch (error) {
+    console.error("Error fetching qualifications:", error);
+    return [];
+  }
+};
+
 // Function to get a staff member by ID with all related data
 const getStaffById = async (id: string) => {
   const staff = await prisma.staff.findUnique({
@@ -142,6 +173,7 @@ const getStaffById = async (id: string) => {
       },
     },
   });
+  const qualifications = await getQualificationsByStaffId(id);
 
   // Format the shifts data and add it as a new property
   const shifts = staff?.shifts.map((shift) => ({
@@ -152,6 +184,7 @@ const getStaffById = async (id: string) => {
   return {
     ...staff,
     shifts,
+    qualifications,
   };
 };
 

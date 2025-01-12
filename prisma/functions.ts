@@ -79,48 +79,6 @@ export const generateDepartment = (name: string) => {
   };
 };
 
-export const generateRandomAppointment = (
-  patientId: string,
-  staffId: string
-) => {
-  const startTime = faker.date.future(); // Generate a random future date for start time
-
-  // Randomly choose a duration: 0.5, 1, or 1.5 hours
-  const durationInHours = faker.helpers.arrayElement([0.5, 1, 1.5]);
-
-  // Calculate end time based on the chosen duration
-  const endTime = new Date(
-    startTime.getTime() + durationInHours * 60 * 60 * 1000
-  );
-
-  // Randomly select a status
-  const status = faker.helpers.arrayElement([
-    "Completed",
-    "Upcoming",
-    "Cancelled",
-  ]);
-
-  return {
-    id: faker.string.uuid(),
-    purpose: faker.lorem.sentence(),
-    status,
-    startTime,
-    endTime,
-    patientId,
-    staffId,
-  };
-};
-
-export const generateRandomTreatmentHistory = (patientId: string) => {
-  return {
-    id: faker.string.uuid(),
-    type: faker.lorem.word(),
-    disease: faker.lorem.words(),
-    visitedDate: faker.date.past(),
-    patientId,
-  };
-};
-
 export const generateRandomPatientAllergy = (
   patientId: string,
   allergyId: string
@@ -131,3 +89,9 @@ export const generateRandomPatientAllergy = (
     severity: faker.helpers.arrayElement(["Mild", "Moderate", "Severe"]),
   };
 };
+
+export const generateRandomQualification = () => ({
+  qualification: faker.person.jobTitle(),
+  institution: faker.company.name(),
+  year: faker.date.past().getFullYear(),
+});

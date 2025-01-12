@@ -10,8 +10,6 @@ import {
   removeShiftAssignment,
   // Types
   staffInput,
-  qualificationInput,
-  employmentHistoryInput,
   shiftAssignmentInput,
 } from "../services/staff.service";
 

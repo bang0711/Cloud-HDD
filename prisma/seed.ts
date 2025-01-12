@@ -1,8 +1,15 @@
-import { Patient, PatientAllergy, PrismaClient, Staff } from "@prisma/client";
+import { PatientAllergy, PrismaClient } from "@prisma/client";
 
 import { faker } from "@faker-js/faker";
 
-import { allergens, departments, medicines, shifts } from "./data";
+import { allergens, departments, shifts } from "./data";
+
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+import {
+  DeleteCommand,
+  DynamoDBDocumentClient,
+  PutCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 import {
   reset,
@@ -11,17 +18,65 @@ import {
   generateRandomPatient,
   generateRandomAddress,
   generateRandomInsurance,
-  generateRandomAppointment,
-  generateRandomTreatmentHistory,
   generateRandomPatientAllergy,
+  generateRandomQualification,
 } from "./functions";
 
 const prisma = new PrismaClient();
+
+// Initialize DynamoDB Client
+const ddbClient = new DynamoDBClient({
+  region: "us-east-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+const docClient = DynamoDBDocumentClient.from(ddbClient);
+
+const clearDynamoDBTable = async (tableName: string) => {
+  try {
+    console.log(`Clearing table: ${tableName}`);
+
+    // Scan the table to get all items
+    const scanResult = await docClient.send(
+      new ScanCommand({
+        TableName: tableName,
+      })
+    );
+
+    const items = scanResult.Items || [];
+
+    // Delete all items one by one
+    await Promise.all(
+      items.map((item) =>
+        docClient.send(
+          new DeleteCommand({
+            TableName: tableName,
+            Key: {
+              staffId: item.staffId, // Adjust based on table schema
+              // Only include the sort key if the table schema requires it
+              qualificationId: item.qualificationId, // Remove or rename if mismatched
+            },
+          })
+        )
+      )
+    );
+
+    console.log(`Table ${tableName} cleared successfully.`);
+  } catch (error) {
+    console.error(`Error clearing table ${tableName}:`, error);
+  }
+};
 
 const main = async () => {
   console.log("Resetting database...");
   await reset();
   console.log("Database reset.");
+
+  // console.log("Resetting DynamoDB tables...");
+  // await clearDynamoDBTable("StaffQualifications");
+  // console.log("DynamoDB tables reset.");
 
   console.log("Seeding...");
 
@@ -51,7 +106,7 @@ const main = async () => {
           const jobType = Math.random() > 0.5 ? "Doctor" : "Nurse";
           return generateRandomStaff(jobType);
         },
-        { count: 20 }
+        { count: 10 }
       );
 
       // Assign department ID to all staff members
@@ -178,6 +233,33 @@ const main = async () => {
   );
 
   console.log("Staff assigned to shifts.");
+
+  console.log("Adding qualifications to DynamoDB...");
+  await Promise.all(
+    allStaff.map(async (staff) => {
+      const qualifications = Array.from(
+        { length: faker.number.int({ min: 1, max: 2 }) },
+        () => generateRandomQualification()
+      );
+
+      await Promise.all(
+        qualifications.map((qualification) =>
+          docClient.send(
+            new PutCommand({
+              TableName: "StaffQualifications",
+              Item: {
+                staffId: staff.id,
+                qualificationId: faker.string.uuid(),
+                ...qualification,
+              },
+            })
+          )
+        )
+      );
+    })
+  );
+
+  console.log("Qualifications added to DynamoDB.");
 
   console.log("Seeding complete.");
 };
