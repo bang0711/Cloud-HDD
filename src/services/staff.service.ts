@@ -66,16 +66,10 @@ const getAllStaff = async ({ page, count, name, department }: StaffLimit) => {
       skip,
       take,
       where: {
-        AND: {
-          OR: [
-            { firstName: { contains: name, mode: "insensitive" } },
-            { lastName: { contains: name, mode: "insensitive" } },
-          ],
-          department: {
-            name: {
-              contains: department === "All" ? "" : department,
-              mode: "insensitive",
-            },
+        department: {
+          name: {
+            contains: department === "All" ? "" : department,
+            mode: "insensitive",
           },
         },
       },
@@ -114,12 +108,11 @@ const getAllStaff = async ({ page, count, name, department }: StaffLimit) => {
 
     prisma.staff.count({
       where: {
-        OR: [
-          { firstName: { contains: name, mode: "insensitive" } },
-          { lastName: { contains: name, mode: "insensitive" } },
-        ],
         department: {
-          name: { contains: department, mode: "insensitive" },
+          name: {
+            contains: department === "All" ? "" : department,
+            mode: "insensitive",
+          },
         },
       },
     }),
